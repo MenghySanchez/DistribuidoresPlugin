@@ -456,7 +456,7 @@ function mpd_distribuidores_shortcode() {
 
     // Contenedor para las tarjetas
     echo '<div id="mpd-distribuidores-grid" class="mpd-distribuidores-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 1rem;">';
-    echo '<p>Cargando distribuidores...</p>';
+    //echo '<p>Cargando distribuidores...</p>';
     echo '</div>';
 
     return ob_get_clean();
