@@ -2,20 +2,20 @@
 /**
  * Plugin Name: Distribuidores
  * Description: Importa distribuidores desde un JSON, permite gestionar y mostrar los registros en el frontend.
- * Version:     0.1.2
+ * Version:     0.1.3
  * Author:      menghy sanchez
  * Text Domain: mi-plugin-distribuidores
  */
 
-if (!defined('ABSPATH')) {
+ if (!defined('ABSPATH')) {
     exit; // Evitar acceso directo
 }
 
-global $mi_plugin_db_version;
-$mi_plugin_db_version = '1.1'; // Versión de la base de datos
+global $wpdb;
+$mi_plugin_db_version = '1.3'; // Versión de la base de datos
 
 /**
- * Al activar el plugin, creamos (o actualizamos) la tabla con la columna 'logo'.
+ * Al activar el plugin, creamos (o actualizamos) la tabla.
  */
 function mpd_activate_plugin() {
     global $wpdb, $mi_plugin_db_version;
@@ -31,7 +31,6 @@ function mpd_activate_plugin() {
         distributor VARCHAR(100) NOT NULL,
         sucursal VARCHAR(255) NOT NULL,
         phone VARCHAR(100) NOT NULL,
-        logo BIGINT(20) DEFAULT 0,  /* Columna para almacenar el ID del logo (opcional) */
         PRIMARY KEY (id)
     ) $charset_collate;";
 
@@ -43,7 +42,7 @@ function mpd_activate_plugin() {
 register_activation_hook(__FILE__, 'mpd_activate_plugin');
 
 /**
- * Menú en el panel de administración
+ * Menú en el panel de administración.
  */
 function mpd_add_admin_menu() {
     add_menu_page(
@@ -59,79 +58,89 @@ function mpd_add_admin_menu() {
 add_action('admin_menu', 'mpd_add_admin_menu');
 
 /**
- * Página de administración: Importar JSON y listar registros
+ * Página de administración: Crear, Modificar, Eliminar y Listar registros.
  */
 function mpd_render_admin_page() {
     global $wpdb;
     $tabla_distribuidores = $wpdb->prefix . 'distribuidores';
 
-    // Importar JSON
-    if (isset($_POST['mpd_json_import']) && check_admin_referer('mpd_import_nonce', 'mpd_import_nonce_field')) {
-        if (!empty($_FILES['mpd_json_file']['tmp_name'])) {
-            $json_file = file_get_contents($_FILES['mpd_json_file']['tmp_name']);
-            $data_array = json_decode($json_file, true); // Decodificar como array asociativo
+    // Procesar creación de nuevo registro
+    if (isset($_POST['mpd_create_distribuidor']) && check_admin_referer('mpd_create_nonce', 'mpd_create_nonce_field')) {
+        $address = sanitize_text_field($_POST['address']);
+        $city = sanitize_text_field($_POST['city']);
+        $province = sanitize_text_field($_POST['province']);
+        $distributor = sanitize_text_field($_POST['distributor']);
+        $sucursal = sanitize_text_field($_POST['sucursal']);
+        $phone = sanitize_text_field($_POST['phone']);
 
-            if (is_array($data_array)) {
-                $count_inserted = 0; // Contador de registros insertados
+        $wpdb->insert(
+            $tabla_distribuidores,
+            compact('address', 'city', 'province', 'distributor', 'sucursal', 'phone')
+        );
 
-                foreach ($data_array as $item) {
-                    // Evitar errores si faltan claves
-                    $address = sanitize_text_field($item['address'] ?? '');
-                    $city = sanitize_text_field($item['city'] ?? '');
-                    $province = sanitize_text_field($item['province'] ?? '');
-                    $distributor = sanitize_text_field($item['distributor'] ?? '');
-                    $sucursal = sanitize_text_field($item['sucursal'] ?? '');
-                    $phone = sanitize_text_field($item['phone'] ?? '');
-
-                    // Insertar registro en la base de datos
-                    $result = $wpdb->insert(
-                        $tabla_distribuidores,
-                        compact('address', 'city', 'province', 'distributor', 'sucursal', 'phone')
-                    );
-
-                    if ($result !== false) {
-                        $count_inserted++;
-                    }
-                }
-
-                if ($count_inserted > 0) {
-                    echo '<div class="notice notice-success"><p>Se importaron ' . $count_inserted . ' registros correctamente.</p></div>';
-                } else {
-                    echo '<div class="notice notice-warning"><p>No se importaron registros. Revisa el formato del JSON.</p></div>';
-                }
-            } else {
-                echo '<div class="notice notice-error"><p>Formato de JSON no válido.</p></div>';
-            }
-        }
+        echo '<div class="notice notice-success"><p>Registro creado correctamente.</p></div>';
     }
+
+    // Procesar edición de un registro
+    if (isset($_POST['mpd_edit_distribuidor']) && check_admin_referer('mpd_edit_nonce', 'mpd_edit_nonce_field')) {
+        $id = absint($_POST['id']);
+        $address = sanitize_text_field($_POST['address']);
+        $city = sanitize_text_field($_POST['city']);
+        $province = sanitize_text_field($_POST['province']);
+        $distributor = sanitize_text_field($_POST['distributor']);
+        $sucursal = sanitize_text_field($_POST['sucursal']);
+        $phone = sanitize_text_field($_POST['phone']);
+
+        $wpdb->update(
+            $tabla_distribuidores,
+            compact('address', 'city', 'province', 'distributor', 'sucursal', 'phone'),
+            ['id' => $id]
+        );
+
+        echo '<div class="notice notice-success"><p>Registro actualizado correctamente.</p></div>';
+    }
+
+    // Procesar eliminación de un registro
+    if (isset($_GET['action']) && $_GET['action'] === 'delete' && !empty($_GET['id'])) {
+        $id = absint($_GET['id']);
+        $wpdb->delete($tabla_distribuidores, ['id' => $id]);
+
+        echo '<div class="notice notice-success"><p>Registro eliminado correctamente.</p></div>';
+    }
+
+    // Formulario para crear un nuevo registro
+    echo '<h1>Gestión de Distribuidores</h1>';
+    echo '<h2>Crear Nuevo Distribuidor</h2>';
+    echo '<form method="post">';
+    wp_nonce_field('mpd_create_nonce', 'mpd_create_nonce_field');
+    echo '<table class="form-table">
+        <tr><th><label for="address">Dirección:</label></th><td><input type="text" name="address" required></td></tr>
+        <tr><th><label for="city">Ciudad:</label></th><td><input type="text" name="city" required></td></tr>
+        <tr><th><label for="province">Provincia:</label></th><td><input type="text" name="province" required></td></tr>
+        <tr><th><label for="distributor">Distribuidor:</label></th><td><input type="text" name="distributor" required></td></tr>
+        <tr><th><label for="sucursal">Sucursal:</label></th><td><input type="text" name="sucursal" required></td></tr>
+        <tr><th><label for="phone">Teléfono:</label></th><td><input type="text" name="phone" required></td></tr>
+    </table>';
+    echo '<p><input type="submit" name="mpd_create_distribuidor" class="button button-primary" value="Crear Registro"></p>';
+    echo '</form>';
+    echo '<hr>';
 
     // Listar registros
     $registros = $wpdb->get_results("SELECT * FROM $tabla_distribuidores ORDER BY id DESC");
 
-    echo '<h1>Gestión de Distribuidores</h1>';
-    echo '<form method="post" enctype="multipart/form-data">';
-    wp_nonce_field('mpd_import_nonce', 'mpd_import_nonce_field');
-    echo '<p>
-        <label for="mpd_json_file">Importar JSON:</label>
-        <input type="file" name="mpd_json_file" id="mpd_json_file" accept=".json" />
-    </p>';
-    echo '<p>
-        <input type="submit" name="mpd_json_import" class="button button-primary" value="Importar JSON" />
-    </p>';
-    echo '</form>';
-    echo '<hr>';
-
     if (!empty($registros)) {
+        echo '<h2>Lista de Distribuidores</h2>';
         echo '<table class="wp-list-table widefat fixed striped">';
         echo '<thead>
             <tr>
                 <th>ID</th>
-                <th>Address</th>
-                <th>City</th>
-                <th>Province</th>
-                <th>Distributor</th>
+                <th>Dirección</th>
+                <th>Ciudad</th>
+                <th>Provincia</th>
+                <th>Distribuidor</th>
                 <th>Sucursal</th>
-                <th>Phone</th>
+                <th>Teléfono</th>
+                <th>Acciones</th>
             </tr>
         </thead>';
         echo '<tbody>';
@@ -144,17 +153,43 @@ function mpd_render_admin_page() {
             echo '<td>' . esc_html($row->distributor) . '</td>';
             echo '<td>' . esc_html($row->sucursal) . '</td>';
             echo '<td>' . esc_html($row->phone) . '</td>';
+            echo '<td>
+                <a href="?page=mpd_distribuidores&action=edit&id=' . $row->id . '" class="button">Editar</a>
+                <a href="?page=mpd_distribuidores&action=delete&id=' . $row->id . '" class="button button-danger" onclick="return confirm(\'¿Estás seguro de eliminar este registro?\')">Eliminar</a>
+            </td>';
             echo '</tr>';
         }
         echo '</tbody>';
         echo '</table>';
     } else {
-        echo '<p>No hay distribuidores registrados aún.</p>';
+        echo '<p>No hay distribuidores registrados.</p>';
+    }
+
+    // Formulario para editar registro si está en modo edición
+    if (isset($_GET['action']) && $_GET['action'] === 'edit' && !empty($_GET['id'])) {
+        $id = absint($_GET['id']);
+        $registro = $wpdb->get_row($wpdb->prepare("SELECT * FROM $tabla_distribuidores WHERE id = %d", $id));
+        if ($registro) {
+            echo '<h2>Editar Distribuidor</h2>';
+            echo '<form method="post">';
+            wp_nonce_field('mpd_edit_nonce', 'mpd_edit_nonce_field');
+            echo '<input type="hidden" name="id" value="' . esc_attr($registro->id) . '">';
+            echo '<table class="form-table">
+                <tr><th><label for="address">Dirección:</label></th><td><input type="text" name="address" value="' . esc_attr($registro->address) . '" required></td></tr>
+                <tr><th><label for="city">Ciudad:</label></th><td><input type="text" name="city" value="' . esc_attr($registro->city) . '" required></td></tr>
+                <tr><th><label for="province">Provincia:</label></th><td><input type="text" name="province" value="' . esc_attr($registro->province) . '" required></td></tr>
+                <tr><th><label for="distributor">Distribuidor:</label></th><td><input type="text" name="distributor" value="' . esc_attr($registro->distributor) . '" required></td></tr>
+                <tr><th><label for="sucursal">Sucursal:</label></th><td><input type="text" name="sucursal" value="' . esc_attr($registro->sucursal) . '" required></td></tr>
+                <tr><th><label for="phone">Teléfono:</label></th><td><input type="text" name="phone" value="' . esc_attr($registro->phone) . '" required></td></tr>
+            </table>';
+            echo '<p><input type="submit" name="mpd_edit_distribuidor" class="button button-primary" value="Guardar Cambios"></p>';
+            echo '</form>';
+        }
     }
 }
 
 /**
- * Shortcode para mostrar distribuidores en el frontend
+ * Shortcode para mostrar distribuidores en el frontend.
  */
 function mpd_distribuidores_shortcode() {
     global $wpdb;
@@ -168,7 +203,7 @@ function mpd_distribuidores_shortcode() {
     echo '<div class="mpd-distribuidores-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 1rem;">';
     if (!empty($registros)) {
         foreach ($registros as $row) {
-            echo '<div class="mpd-distribuidor-card" style="border: 1px solid #ccc; padding: 1rem;">';
+            echo '<div class="mpd-distribuidor-card" style="border: 1px solid #ccc; padding: 1rem; border-radius: 8px;">';
             echo '<h3>' . esc_html($row->distributor) . '</h3>';
             echo '<p><strong>Sucursal:</strong> ' . esc_html($row->sucursal) . '</p>';
             echo '<p><strong>Provincia:</strong> ' . esc_html($row->province) . '</p>';
