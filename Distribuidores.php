@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Distribuidores
  * Description: Importa distribuidores desde un JSON, permite gestionar y mostrar los registros en el frontend.
- * Version:     0.1.8
+ * Version:     0.1.9
  * Author:      menghy sanchez
  * Text Domain: mi-plugin-distribuidores
  */
@@ -12,7 +12,7 @@ if (!defined('ABSPATH')) {
 }
 
 global $wpdb;
-$mi_plugin_db_version = '1.8';
+$mi_plugin_db_version = '1.9';
 
 /**
  * Al activar el plugin, creamos o actualizamos la tabla.
@@ -54,6 +54,15 @@ function mpd_add_admin_menu() {
         'mpd_render_admin_page',
         'dashicons-store',
         25
+    );
+
+    add_submenu_page(
+        'mpd_distribuidores',
+        'Administrar Distribuidores',
+        'Administrar Distribuidores',
+        'manage_options',
+        'mpd_administrar_distribuidores',
+        'mpd_render_admin_distributors_page'
     );
 }
 add_action('admin_menu', 'mpd_add_admin_menu');
@@ -181,41 +190,41 @@ function mpd_render_admin_page() {
     
      // Formulario de creación/edición
     $registro_a_editar = null;
-    if (isset($_GET['action']) && $_GET['action'] === 'edit' && !empty($_GET['id'])) {
-        $id = absint($_GET['id']);
-        $registro_a_editar = $wpdb->get_row($wpdb->prepare("SELECT * FROM $tabla_distribuidores WHERE id = %d", $id));
-    }
+if (isset($_GET['action']) && $_GET['action'] === 'edit' && !empty($_GET['id'])) {
+    $id = absint($_GET['id']);
+    $registro_a_editar = $wpdb->get_row($wpdb->prepare("SELECT * FROM $tabla_distribuidores WHERE id = %d", $id));
+}
 
-    echo '<h2>' . ($registro_a_editar ? 'Editar Distribuidor' : 'Crear Nuevo Distribuidor') . '</h2>';
-    echo '<form method="post">';
-    wp_nonce_field('mpd_nonce', 'mpd_nonce_field');
-    if ($registro_a_editar) {
-        echo '<input type="hidden" name="id" value="' . esc_attr($registro_a_editar->id) . '">';
-    }
-    echo '<table class="form-table">
-        <tr><th><label for="address">Dirección:</label></th>
-            <td><input type="text" name="address" value="' . esc_attr($registro_a_editar->address ?? '') . '" required></td></tr>
-        <tr><th><label for="city">Ciudad:</label></th>
-            <td><input type="text" name="city" value="' . esc_attr($registro_a_editar->city ?? '') . '" required></td></tr>
-        <tr><th><label for="province">Provincia:</label></th>
-            <td><input type="text" name="province" value="' . esc_attr($registro_a_editar->province ?? '') . '" required></td></tr>
-        <tr><th><label for="distributor">Distribuidor:</label></th>
-            <td><input type="text" name="distributor" value="' . esc_attr($registro_a_editar->distributor ?? '') . '" required></td></tr>
-        <tr><th><label for="sucursal">Sucursal:</label></th>
-            <td><input type="text" name="sucursal" value="' . esc_attr($registro_a_editar->sucursal ?? '') . '"></td></tr>
-        <tr><th><label for="phone">Teléfono:</label></th>
-            <td><input type="text" name="phone" value="' . esc_attr($registro_a_editar->phone ?? '') . '"></td></tr>
-        <tr><th><label for="logo">Logo:</label></th>
-            <td>
-                <button type="button" class="button mpd-select-logo">Seleccionar Logo</button>
-                <input type="hidden" name="logo_id" id="mpd_logo_id" value="' . esc_attr($registro_a_editar->logo ?? '') . '">
-                <img src="' . ($registro_a_editar->logo ? esc_url(wp_get_attachment_url($registro_a_editar->logo)) : '') . '" class="mpd-logo-preview" style="max-width: 80px; ' . ($registro_a_editar->logo ? '' : 'display:none;') . '">
-                <button type="button" class="button mpd-remove-logo">Quitar Logo</button>
-            </td>
-        </tr>
-    </table>';
-    echo '<p><input type="submit" name="' . ($registro_a_editar ? 'mpd_edit_distribuidor' : 'mpd_create_distribuidor') . '" class="button button-primary" value="' . ($registro_a_editar ? 'Guardar Cambios' : 'Crear Registro') . '"></p>';
-    echo '</form>';
+echo '<h2>' . ($registro_a_editar ? 'Editar Distribuidor' : 'Crear Nuevo Distribuidor') . '</h2>';
+echo '<form method="post">';
+wp_nonce_field('mpd_nonce', 'mpd_nonce_field');
+if ($registro_a_editar) {
+    echo '<input type="hidden" name="id" value="' . esc_attr($registro_a_editar->id) . '">';
+}
+echo '<table class="form-table">
+    <tr><th><label for="address">Dirección:</label></th>
+        <td><input type="text" name="address" value="' . esc_attr($registro_a_editar->address ?? '') . '" required></td></tr>
+    <tr><th><label for="city">Ciudad:</label></th>
+        <td><input type="text" name="city" value="' . esc_attr($registro_a_editar->city ?? '') . '" required></td></tr>
+    <tr><th><label for="province">Provincia:</label></th>
+        <td><input type="text" name="province" value="' . esc_attr($registro_a_editar->province ?? '') . '" required></td></tr>
+    <tr><th><label for="distributor">Distribuidor:</label></th>
+        <td><input type="text" name="distributor" value="' . esc_attr($registro_a_editar->distributor ?? '') . '" required></td></tr>
+    <tr><th><label for="sucursal">Sucursal:</label></th>
+        <td><input type="text" name="sucursal" value="' . esc_attr($registro_a_editar->sucursal ?? '') . '"></td></tr>
+    <tr><th><label for="phone">Teléfono:</label></th>
+        <td><input type="text" name="phone" value="' . esc_attr($registro_a_editar->phone ?? '') . '"></td></tr>
+    <tr><th><label for="logo">Logo:</label></th>
+        <td>
+            <button type="button" class="button mpd-select-logo">Seleccionar Logo</button>
+            <input type="hidden" name="logo_id" id="mpd_logo_id" value="' . esc_attr($registro_a_editar->logo ?? '') . '">
+            <img src="' . (!empty($registro_a_editar->logo) ? esc_url(wp_get_attachment_url($registro_a_editar->logo)) : '') . '" class="mpd-logo-preview" style="max-width: 80px; ' . (!empty($registro_a_editar->logo) ? '' : 'display:none;') . '">
+            <button type="button" class="button mpd-remove-logo">Quitar Logo</button>
+        </td>
+    </tr>
+</table>';
+echo '<p><input type="submit" name="' . ($registro_a_editar ? 'mpd_edit_distribuidor' : 'mpd_create_distribuidor') . '" class="button button-primary" value="' . ($registro_a_editar ? 'Guardar Cambios' : 'Crear Registro') . '"></p>';
+echo '</form>';
 
 
     
@@ -268,6 +277,121 @@ function mpd_render_admin_page() {
         echo '<p>No hay distribuidores registrados.</p>';
     }
 }
+
+/**
+ * Página de administración para "Administrar Distribuidores".
+ */
+function mpd_render_admin_distributors_page() {
+    global $wpdb;
+    $tabla_distribuidores = $wpdb->prefix . 'distribuidores';
+
+    // Obtener distribuidores únicos y sus conteos
+    $distribuidores = $wpdb->get_results("
+        SELECT distributor, logo, COUNT(*) as registros
+        FROM $tabla_distribuidores
+        GROUP BY distributor
+        ORDER BY distributor ASC
+    ");
+
+    // Procesar asignación de logo
+    if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['mpd_assign_logo'])) {
+        $distributor = sanitize_text_field($_POST['distributor']);
+        $logo_id = intval($_POST['logo_id']);
+
+        $wpdb->update(
+            $tabla_distribuidores,
+            ['logo' => $logo_id],
+            ['distributor' => $distributor]
+        );
+
+        echo '<div class="notice notice-success"><p>Logo asignado correctamente para "' . esc_html($distributor) . '".</p></div>';
+    }
+
+    echo '<h1>Administrar Distribuidores</h1>';
+    echo '<p>Desde esta vista puedes asignar un logo único a cada distribuidor y gestionar sus detalles.</p>';
+
+    if (!empty($distribuidores)) {
+        echo '<table class="wp-list-table widefat fixed striped">';
+        echo '<thead>
+            <tr>
+                <th>Distribuidor</th>
+                <th>Logo</th>
+                <th>Registros Asociados</th>
+                <th>Acciones</th>
+            </tr>
+        </thead>';
+        echo '<tbody>';
+        foreach ($distribuidores as $distribuidor) {
+            $logo_url = $distribuidor->logo ? wp_get_attachment_url($distribuidor->logo) : '';
+
+            echo '<tr>';
+            echo '<td>' . esc_html($distribuidor->distributor) . '</td>';
+            echo '<td>';
+            if ($logo_url) {
+                echo '<img src="' . esc_url($logo_url) . '" alt="Logo" style="max-width: 50px; height: auto;">';
+            } else {
+                echo '—';
+            }
+            echo '</td>';
+            echo '<td>' . esc_html($distribuidor->registros) . '</td>';
+            echo '<td>
+                <button class="button mpd-select-logo" data-distributor="' . esc_attr($distribuidor->distributor) . '">Asignar Logo</button>
+            </td>';
+            echo '</tr>';
+        }
+        echo '</tbody>';
+        echo '</table>';
+    } else {
+        echo '<p>No hay distribuidores registrados.</p>';
+    }
+
+    // Formulario oculto para procesar asignación de logo
+    echo '<form method="post" id="mpd-assign-logo-form" style="display: none;">
+        <input type="hidden" name="distributor" id="mpd-distributor">
+        <input type="hidden" name="logo_id" id="mpd-logo-id">
+        <input type="hidden" name="mpd_assign_logo" value="1">
+        ' . wp_nonce_field('mpd_nonce', 'mpd_nonce_field', true, false) . '
+    </form>';
+}
+
+/**
+ * Script para manejar la selección de logos en "Administrar Distribuidores".
+ */
+function mpd_admin_distributors_script() {
+    ?>
+    <script>
+        jQuery(document).ready(function ($) {
+            let mediaUploader;
+
+            $('.mpd-select-logo').click(function (e) {
+                e.preventDefault();
+                const distributor = $(this).data('distributor');
+                if (mediaUploader) {
+                    mediaUploader.open();
+                    return;
+                }
+                mediaUploader = wp.media({
+                    title: 'Seleccionar Logo',
+                    button: {
+                        text: 'Asignar este logo',
+                    },
+                    multiple: false
+                });
+
+                mediaUploader.on('select', function () {
+                    const attachment = mediaUploader.state().get('selection').first().toJSON();
+                    $('#mpd-logo-id').val(attachment.id);
+                    $('#mpd-distributor').val(distributor);
+                    $('#mpd-assign-logo-form').submit();
+                });
+
+                mediaUploader.open();
+            });
+        });
+    </script>
+    <?php
+}
+add_action('admin_footer', 'mpd_admin_distributors_script');
 
 /**
  * Shortcode para mostrar distribuidores en el frontend.
