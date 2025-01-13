@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Distribuidores
  * Description: Importa distribuidores desde un JSON, permite gestionar y mostrar los registros en el frontend.
- * Version:     0.1.9
+ * Version:     1.1
  * Author:      menghy sanchez
  * Text Domain: mi-plugin-distribuidores
  */
@@ -12,7 +12,7 @@ if (!defined('ABSPATH')) {
 }
 
 global $wpdb;
-$mi_plugin_db_version = '1.9';
+$mi_plugin_db_version = '1.1';
 
 /**
  * Al activar el plugin, creamos o actualizamos la tabla.
@@ -41,6 +41,14 @@ function mpd_activate_plugin() {
     add_option('mi_plugin_db_version', $mi_plugin_db_version);
 }
 register_activation_hook(__FILE__, 'mpd_activate_plugin');
+/**
+ * Permitir subida de archivos JSON.
+ */
+function mpd_allow_json_upload($mime_types) {
+    $mime_types['json'] = 'application/json'; // Permitir archivos JSON
+    return $mime_types;
+}
+add_filter('upload_mimes', 'mpd_allow_json_upload');
 
 /**
  * Menú en el panel de administración.
@@ -134,28 +142,32 @@ function mpd_render_admin_page() {
         }
 
         // Importar JSON
-        if (isset($_POST['mpd_import_json']) && check_admin_referer('mpd_nonce', 'mpd_nonce_field')) {
-            $json_url = esc_url_raw($_POST['json_url']);
-            $json_file = file_get_contents($json_url);
-            $data = json_decode($json_file, true);
+        // Procesar importación desde JSON
+if (isset($_POST['mpd_import_json']) && check_admin_referer('mpd_nonce', 'mpd_nonce_field')) {
+    if (!empty($_FILES['json_file']['tmp_name'])) {
+        $json_file = file_get_contents($_FILES['json_file']['tmp_name']);
+        $data = json_decode($json_file, true);
 
-            if (json_last_error() === JSON_ERROR_NONE && is_array($data)) {
-                foreach ($data as $record) {
-                    $address = sanitize_text_field($record['address'] ?? '');
-                    $city = sanitize_text_field($record['city'] ?? '');
-                    $province = sanitize_text_field($record['province'] ?? '');
-                    $distributor = sanitize_text_field($record['distributor'] ?? '');
-                    $sucursal = sanitize_text_field($record['sucursal'] ?? '');
-                    $phone = sanitize_text_field($record['phone'] ?? '');
-                    $logo = 0;
+        if (json_last_error() === JSON_ERROR_NONE && is_array($data)) {
+            foreach ($data as $record) {
+                $address = sanitize_text_field($record['address'] ?? '');
+                $city = sanitize_text_field($record['city'] ?? '');
+                $province = sanitize_text_field($record['province'] ?? '');
+                $distributor = sanitize_text_field($record['distributor'] ?? '');
+                $sucursal = sanitize_text_field($record['sucursal'] ?? '');
+                $phone = sanitize_text_field($record['phone'] ?? '');
+                $logo = 0;
 
-                    $wpdb->insert($tabla_distribuidores, compact('address', 'city', 'province', 'distributor', 'sucursal', 'phone', 'logo'));
-                }
-                echo '<div class="notice notice-success"><p>Importación completada correctamente.</p></div>';
-            } else {
-                echo '<div class="notice notice-error"><p>Error al procesar el archivo JSON.</p></div>';
+                $wpdb->insert($tabla_distribuidores, compact('address', 'city', 'province', 'distributor', 'sucursal', 'phone', 'logo'));
             }
+            echo '<div class="notice notice-success"><p>Importación completada correctamente.</p></div>';
+        } else {
+            echo '<div class="notice notice-error"><p>Error: El archivo JSON es inválido o está vacío.</p></div>';
         }
+    } else {
+        echo '<div class="notice notice-error"><p>Error: Por favor, selecciona un archivo JSON válido.</p></div>';
+    }
+}
 
         // Exportar a JSON
         if (isset($_POST['mpd_export_json'])) {
@@ -171,15 +183,12 @@ function mpd_render_admin_page() {
     echo '<h1>Gestión de Distribuidores</h1>';
 
     // Formulario para importar JSON
-    echo '<h2>Importar Distribuidores desde JSON</h2>';
-    echo '<form method="post">';
-    wp_nonce_field('mpd_nonce', 'mpd_nonce_field');
-    echo '<div id="mpd-json-uploader">';
-    echo '<button type="button" class="button mpd-select-logo">Seleccionar JSON</button>';
-    echo '<input type="hidden" name="json_url" id="json_url" />';
-    echo '</div>';
-    echo '<p><input type="submit" name="mpd_import_json" class="button button-primary" value="Importar JSON"></p>';
-    echo '</form>';
+echo '<h2>Importar Distribuidores desde JSON</h2>';
+echo '<form method="post" enctype="multipart/form-data">';
+wp_nonce_field('mpd_nonce', 'mpd_nonce_field');
+echo '<input type="file" name="json_file" accept=".json" />';
+echo '<p><input type="submit" name="mpd_import_json" class="button button-primary" value="Importar JSON"></p>';
+echo '</form>';
 
     // Botón para exportar JSON
     echo '<h2>Exportar Distribuidores</h2>';
@@ -445,7 +454,7 @@ function mpd_distribuidores_shortcode() {
     }
     echo '</select>';
 
-    echo '<label>Distribuidor: </label>';
+    echo '<label>Tienda: </label>';
     echo '<select id="mpd-filtro-distribuidor">';
     echo '<option value="">Todos</option>';
     foreach ($distribuidores as $distribuidor) {

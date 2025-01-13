@@ -20,5 +20,5 @@ jQuery(document).ready(function ($) {
     $('#mpd-filtro-provincia, #mpd-filtro-ciudad, #mpd-filtro-distribuidor').change(cargarDistribuidores);
 
     // Cargar todos los registros al inicio
-    cargarDistribuidores();
+    //cargarDistribuidores();
 });
