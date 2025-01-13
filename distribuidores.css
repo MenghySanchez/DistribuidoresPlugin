@@ -2,14 +2,17 @@
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
     gap: 1rem;
+    margin-top: 75px;
+    row-gap: 80px;
 }
 
 .mpd-distribuidor-card {
     border: 1px solid #ccc;
     padding: 1rem;
-    border-radius: 8px;
+    border-radius: 10px;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
     transition: transform 0.2s;
+    justify-items: center;
 }
 
 .mpd-distribuidor-card:hover {
@@ -17,16 +20,24 @@
 }
 
 .mpd-distribuidor-card img {
-    max-width: 100%;
-    height: auto;
-    margin-bottom: 10px;
+    width: 100px;
+    height: 100px;
+    border-radius: 50%;
+    overflow: hidden;
+    object-fit: cover;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    margin-top: -83px;
+    background-color: white;
 }
+
 
 .mpd-filtros {
     margin-bottom: 20px;
     display: flex;
     flex-wrap: wrap;
     gap: 10px;
+    justify-content: center;
+    align-items: center;
 }
 
 .mpd-filtros label {
@@ -37,7 +48,16 @@
 .mpd-filtros select {
     padding: 5px;
     font-size: 14px;
+    border-radius: 10px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 .mpd-opciones-select{
     text-transform: capitalize;
+
+}
+
+.mpd-distribuidores-grid h3 {
+    text-transform: capitalize;
+    font-size: 18px;
+    margin-top: 5px;
 }
