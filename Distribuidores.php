@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Distribuidores
  * Description: Importa distribuidores desde un JSON, permite gestionar y mostrar los registros en el frontend.
- * Version:     1.2.1
+ * Version:     1.2.2
  * Author:      menghy sanchez
  * Text Domain: mi-plugin-distribuidores
  */
@@ -12,7 +12,7 @@ if (!defined('ABSPATH')) {
 }
 
 global $wpdb;
-$mi_plugin_db_version = '1.2.1';
+$mi_plugin_db_version = '1.2.2';
 
 /**
  * Al activar el plugin, creamos o actualizamos la tabla.
@@ -441,7 +441,7 @@ function mpd_distribuidores_shortcode() {
     echo '<select id="mpd-filtro-provincia">';
     echo '<option value="">Selecciona una Provincia</option>';
     foreach ($provincias as $provincia) {
-        echo '<option value="' . esc_attr($provincia) . '">' . esc_html($provincia) . '</option>';
+        echo '<option class="mpd-opciones-select" value="' . esc_attr($provincia) . '">' . esc_html($provincia) . '</option>';
     }
     echo '</select>';
 
@@ -449,15 +449,15 @@ function mpd_distribuidores_shortcode() {
     echo '<select id="mpd-filtro-ciudad">';
     echo '<option value="">Selecciona una Ciudad</option>';
     foreach ($ciudades as $ciudad) {
-        echo '<option value="' . esc_attr($ciudad) . '">' . esc_html($ciudad) . '</option>';
+        echo '<option class="mpd-opciones-select" value="' . esc_attr($ciudad) . '">' . esc_html($ciudad) . '</option>';
     }
     echo '</select>';
 
-    echo '<label>Distribuidor: </label>';
+    echo '<label>Tienda: </label>';
     echo '<select id="mpd-filtro-distribuidor">';
-    echo '<option value="">Selecciona un Distribuidor</option>';
+    echo '<option value="">Selecciona una Tienda</option>';
     foreach ($distribuidores as $distribuidor) {
-        echo '<option value="' . esc_attr($distribuidor) . '">' . esc_html($distribuidor) . '</option>';
+        echo '<option class="mpd-opciones-select" value="' . esc_attr($distribuidor) . '">' . esc_html($distribuidor) . '</option>';
     }
     echo '</select>';
     echo '</div>';
@@ -558,9 +558,9 @@ function mpd_get_distribuidores_filtrados() {
             $logo_url = $row->logo ? wp_get_attachment_url($row->logo) : '';
             echo '<div class="mpd-distribuidor-card" style="border: 1px solid #ccc; padding: 10px; margin: 10px;">';
             if ($logo_url) {
-                echo '<img src="' . esc_url($logo_url) . '" alt="Logo de ' . esc_attr($row->distributor) . '" style="width: 100%; max-width: 150px; height: auto; margin-bottom: 10px;">';
+                echo '<img src="' . esc_url($logo_url) . '" alt="Logo de ' . esc_attr($row->sucursal) . '" style="width: 100%; max-width: 150px; height: auto; margin-bottom: 10px;">';
             }
-            echo '<h3>' . esc_html($row->distributor) . '</h3>';
+            echo '<h3>' . esc_html($row->sucursal) . '</h3>';
             echo '<p><strong>Dirección:</strong> ' . esc_html($row->address) . '</p>';
             echo '<p><strong>Teléfono:</strong> ' . esc_html($row->phone) . '</p>';
             echo '</div>';
