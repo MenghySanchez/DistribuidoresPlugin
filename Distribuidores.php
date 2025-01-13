@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Distribuidores
  * Description: Importa distribuidores desde un JSON, permite gestionar y mostrar los registros en el frontend.
- * Version:     1.1
+ * Version:     1.2.1
  * Author:      menghy sanchez
  * Text Domain: mi-plugin-distribuidores
  */
@@ -12,7 +12,7 @@ if (!defined('ABSPATH')) {
 }
 
 global $wpdb;
-$mi_plugin_db_version = '1.1';
+$mi_plugin_db_version = '1.2.1';
 
 /**
  * Al activar el plugin, creamos o actualizamos la tabla.
@@ -436,11 +436,10 @@ function mpd_distribuidores_shortcode() {
 
     ob_start();
 
-    // Filtros
     echo '<div class="mpd-filtros" style="margin-bottom: 20px;">';
     echo '<label>Provincia: </label>';
     echo '<select id="mpd-filtro-provincia">';
-    echo '<option value="">Todas</option>';
+    echo '<option value="">Selecciona una Provincia</option>';
     foreach ($provincias as $provincia) {
         echo '<option value="' . esc_attr($provincia) . '">' . esc_html($provincia) . '</option>';
     }
@@ -448,15 +447,15 @@ function mpd_distribuidores_shortcode() {
 
     echo '<label>Ciudad: </label>';
     echo '<select id="mpd-filtro-ciudad">';
-    echo '<option value="">Todas</option>';
+    echo '<option value="">Selecciona una Ciudad</option>';
     foreach ($ciudades as $ciudad) {
         echo '<option value="' . esc_attr($ciudad) . '">' . esc_html($ciudad) . '</option>';
     }
     echo '</select>';
 
-    echo '<label>Tienda: </label>';
+    echo '<label>Distribuidor: </label>';
     echo '<select id="mpd-filtro-distribuidor">';
-    echo '<option value="">Todos</option>';
+    echo '<option value="">Selecciona un Distribuidor</option>';
     foreach ($distribuidores as $distribuidor) {
         echo '<option value="' . esc_attr($distribuidor) . '">' . esc_html($distribuidor) . '</option>';
     }
@@ -464,17 +463,72 @@ function mpd_distribuidores_shortcode() {
     echo '</div>';
 
     // Contenedor para las tarjetas
-    echo '<div id="mpd-distribuidores-grid" class="mpd-distribuidores-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 1rem;">';
-    //echo '<p>Cargando distribuidores...</p>';
-    echo '</div>';
+echo '<div id="mpd-distribuidores-grid" class="mpd-distribuidores-grid" style="display: none;"></div>';
 
     return ob_get_clean();
 }
 add_shortcode('mpd_distribuidores', 'mpd_distribuidores_shortcode');
 
 /**
- * Endpoint AJAX para obtener los registros filtrados.
+ * Endpoint AJAX para obtener ciudades según la provincia seleccionada.
  */
+function mpd_get_ciudades_por_provincia() {
+    global $wpdb;
+    $tabla_distribuidores = $wpdb->prefix . 'distribuidores';
+
+    $provincia = sanitize_text_field($_POST['provincia']);
+
+    if (empty($provincia)) {
+        wp_send_json_error('Debe seleccionar una provincia.');
+    }
+
+    $ciudades = $wpdb->get_col($wpdb->prepare(
+        "SELECT DISTINCT city FROM $tabla_distribuidores WHERE province = %s ORDER BY city ASC",
+        $provincia
+    ));
+
+    if (!empty($ciudades)) {
+        wp_send_json_success($ciudades);
+    } else {
+        wp_send_json_error('No se encontraron ciudades para la provincia seleccionada.');
+    }
+}
+add_action('wp_ajax_get_ciudades_por_provincia', 'mpd_get_ciudades_por_provincia');
+add_action('wp_ajax_nopriv_get_ciudades_por_provincia', 'mpd_get_ciudades_por_provincia');
+
+/**
+ * Endpoint AJAX para obtener distribuidores según la ciudad seleccionada.
+ */
+function mpd_get_distribuidores_por_ciudad() {
+    global $wpdb;
+    $tabla_distribuidores = $wpdb->prefix . 'distribuidores';
+
+    $ciudad = sanitize_text_field($_POST['ciudad']);
+
+    if (empty($ciudad)) {
+        wp_send_json_error('Debe seleccionar una ciudad.');
+    }
+
+    $distribuidores = $wpdb->get_col($wpdb->prepare(
+        "SELECT DISTINCT distributor FROM $tabla_distribuidores WHERE city = %s ORDER BY distributor ASC",
+        $ciudad
+    ));
+
+    if (!empty($distribuidores)) {
+        wp_send_json_success($distribuidores);
+    } else {
+        wp_send_json_error('No se encontraron distribuidores para la ciudad seleccionada.');
+    }
+}
+add_action('wp_ajax_get_distribuidores_por_ciudad', 'mpd_get_distribuidores_por_ciudad');
+add_action('wp_ajax_nopriv_get_distribuidores_por_ciudad', 'mpd_get_distribuidores_por_ciudad');
+
+/**
+ * Registrar el endpoint para obtener registros filtrados.
+ */
+add_action('wp_ajax_get_distribuidores_filtrados', 'mpd_get_distribuidores_filtrados');
+add_action('wp_ajax_nopriv_get_distribuidores_filtrados', 'mpd_get_distribuidores_filtrados');
+
 function mpd_get_distribuidores_filtrados() {
     global $wpdb;
     $tabla_distribuidores = $wpdb->prefix . 'distribuidores';
@@ -483,46 +537,36 @@ function mpd_get_distribuidores_filtrados() {
     $ciudad = sanitize_text_field($_POST['ciudad']);
     $distribuidor = sanitize_text_field($_POST['distribuidor']);
 
-    $where = [];
-    if (!empty($provincia)) {
-        $where[] = $wpdb->prepare("province = %s", $provincia);
-    }
-    if (!empty($ciudad)) {
-        $where[] = $wpdb->prepare("city = %s", $ciudad);
-    }
-    if (!empty($distribuidor)) {
-        $where[] = $wpdb->prepare("distributor = %s", $distribuidor);
+    // Validar que todos los filtros estén seleccionados
+    if (empty($provincia) || empty($ciudad) || empty($distribuidor)) {
+        wp_send_json_error('Debe seleccionar Provincia, Ciudad y Distribuidor.');
     }
 
-    $query = "SELECT * FROM $tabla_distribuidores";
-    if (!empty($where)) {
-        $query .= " WHERE " . implode(" AND ", $where);
-    }
-    $query .= " ORDER BY id DESC";
+    // Consultar registros según los filtros
+    $query = $wpdb->prepare(
+        "SELECT * FROM $tabla_distribuidores 
+         WHERE province = %s AND city = %s AND distributor = %s 
+         ORDER BY id DESC",
+        $provincia, $ciudad, $distribuidor
+    );
 
     $registros = $wpdb->get_results($query);
 
-    ob_start();
-    foreach ($registros as $row) {
-        $logo_url = $row->logo ? wp_get_attachment_url($row->logo) : '';
-        echo '<div class="mpd-distribuidor-card" style="border: 1px solid #ccc; padding: 1rem; border-radius: 8px;">';
-
-        // Mostrar logo si está disponible
-        if ($logo_url) {
-            echo '<img src="' . esc_url($logo_url) . '" alt="Logo de ' . esc_attr($row->distributor) . '" style="max-width: 100%; height: auto; margin: 0 0 10px;">';
-        }
-
-        echo '<h3>' . esc_html($row->distributor) . '</h3>';
-        echo '<p><strong>Dirección:</strong> ' . esc_html($row->address) . '</p>';
-
-        // Mostrar teléfono si existe
-        if (!empty($row->phone) && strtolower($row->phone) !== 'na') {
+    if (!empty($registros)) {
+        ob_start();
+        foreach ($registros as $row) {
+            $logo_url = $row->logo ? wp_get_attachment_url($row->logo) : '';
+            echo '<div class="mpd-distribuidor-card" style="border: 1px solid #ccc; padding: 10px; margin: 10px;">';
+            if ($logo_url) {
+                echo '<img src="' . esc_url($logo_url) . '" alt="Logo de ' . esc_attr($row->distributor) . '" style="width: 100%; max-width: 150px; height: auto; margin-bottom: 10px;">';
+            }
+            echo '<h3>' . esc_html($row->distributor) . '</h3>';
+            echo '<p><strong>Dirección:</strong> ' . esc_html($row->address) . '</p>';
             echo '<p><strong>Teléfono:</strong> ' . esc_html($row->phone) . '</p>';
+            echo '</div>';
         }
-
-        echo '</div>';
+        wp_send_json_success(ob_get_clean());
+    } else {
+        wp_send_json_success('<p>No se encontraron distribuidores.</p>');
     }
-    wp_send_json_success(ob_get_clean());
 }
-add_action('wp_ajax_get_distribuidores_filtrados', 'mpd_get_distribuidores_filtrados');
-add_action('wp_ajax_nopriv_get_distribuidores_filtrados', 'mpd_get_distribuidores_filtrados');
